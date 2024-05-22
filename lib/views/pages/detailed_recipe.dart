@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 
@@ -9,9 +11,8 @@ import 'package:dio/dio.dart';
 import 'package:video_player/video_player.dart';
 
 class RecipeDetails extends StatefulWidget {
- 
   Recipe recipe;
- 
+
   RecipeDetails({required this.recipe});
 
   @override
@@ -56,7 +57,9 @@ class _RecipeDetailsState extends State<RecipeDetails> {
                         })
                     : const Text("No Instruction")),
           )),
-      Item(headerText: "Ingredients", expandedBody: Expanded(
+      Item(
+          headerText: "Ingredients",
+          expandedBody: Expanded(
             child: SizedBox(
                 height: 400,
                 child: widget.recipe.ingredients != null
@@ -66,31 +69,32 @@ class _RecipeDetailsState extends State<RecipeDetails> {
                           return Card(
                             child: ListTile(
                               title: Text(
-                                "${index + 1}. ${widget.recipe.ingredients[index]}",
+                                "${index + 1}. ${widget.recipe.ingredients[index]['raw_text']}",
                                 style: const TextStyle(
                                     color: Colors.black, wordSpacing: 3),
                               ),
-                            ), 
+                            ),
                           );
                         })
                     : const Text("No ingredients listed")),
           )),
-      Item(
-          headerText: "Video Guide",
-          expandedBody: FutureBuilder(
-              future: _initializeVideoPlayerFutrue,
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.done) {
-                  return AspectRatio(
-                    aspectRatio: _controller.value.aspectRatio,
-                    child: VideoPlayer(_controller),
-                  );
-                } else {
-                  return const Center(
-                    child: CircularProgressIndicator(),
-                  );
-                }
-              }))
+      // Item(
+      //     headerText: "Video Guide",
+      //     expandedBody: FutureBuilder(
+      //         future: _initializeVideoPlayerFutrue,
+      //         builder: (context, snapshot) {
+      //           if (snapshot.connectionState == ConnectionState.done) {
+      //             return AspectRatio(
+      //               aspectRatio: _controller.value.aspectRatio,
+      //               child:Container(
+      //                 child:VideoPlayer(_controller),)
+      //             );
+      //           } else {
+      //             return const Center(
+      //               child: CircularProgressIndicator(),
+      //             );
+      //           }
+      //         }))
     ];
   }
 
@@ -104,8 +108,7 @@ class _RecipeDetailsState extends State<RecipeDetails> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text("Recipe Detail Page")),
-      body:
-          Column(
+      body: Column(
         children: [
           RecipeCard(
             title: widget.recipe.name,
@@ -113,7 +116,9 @@ class _RecipeDetailsState extends State<RecipeDetails> {
             rating: widget.recipe.rating.toString(),
             thumbnailUrl: widget.recipe.images,
           ),
-          const SizedBox(height: 20,),
+          const SizedBox(
+            height: 20,
+          ),
           Expanded(
             child: ListView(
               children: data.map<Widget>((Item item) {
@@ -128,9 +133,13 @@ class _RecipeDetailsState extends State<RecipeDetails> {
               }).toList(),
             ),
           ),
+          TextButton(
+              onPressed: () {
+                showVideoDialog(_controller);
+              },
+              child: const Text("Video Guide"))
         ],
       ),
-     
     );
   }
 
@@ -149,27 +158,99 @@ class _RecipeDetailsState extends State<RecipeDetails> {
     print(response.data);
   }
 
-  Future showVideoDialog(String url) {
-    _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+  // Future showVideoDialog(VideoPlayerController controller) {
+  //   // _controller = VideoPlayerController.networkUrl(Uri.parse(url));
+  //   return showDialog(
+  //       context: context,
+  //       builder: (context) {
+  //         return AlertDialog(
+  //             title: const Text("Video Instructions"),
+  //             content: FutureBuilder(
+  //                 future: _initializeVideoPlayerFutrue,
+  //                 builder: (context, snapshot) {
+  //                   if (snapshot.connectionState == ConnectionState.done) {
+  //                     return AspectRatio(
+  //                       aspectRatio: _controller.value.aspectRatio,
+  //                       child: VideoPlayer(controller),
+  //                     );
+  //                   } else {
+  //                     return const Center(
+  //                       child: CircularProgressIndicator(),
+  //                     );
+  //                   }
+  //                 }));
+  //       });
+  // }
+  Future<void> showVideoDialog(VideoPlayerController controller) {
     return showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-              title: const Text("Video Instructions"),
-              content: FutureBuilder(
-                  future: _initializeVideoPlayerFutrue,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.done) {
-                      return AspectRatio(
-                        aspectRatio: _controller.value.aspectRatio,
-                        child: VideoPlayer(_controller),
-                      );
-                    } else {
-                      return const Center(
-                        child: CircularProgressIndicator(),
-                      );
-                    }
-                  }));
-        });
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Video Instruction"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AspectRatio(
+                aspectRatio: controller.value.aspectRatio,
+                child: VideoPlayer(controller),
+              ),
+              const SizedBox(height: 16.0),
+              VideoProgressIndicator(
+                controller,
+                allowScrubbing: true,
+                colors: const VideoProgressColors(
+                  playedColor: Colors.blue,
+                  bufferedColor: Colors.grey,
+                  backgroundColor: Colors.white,
+                ),
+              ),
+              const SizedBox(height: 16.0),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.fast_rewind),
+                    onPressed: () {
+                      final position = controller.value.position.inSeconds;
+                      final duration = controller.value.duration.inSeconds;
+                      final newPosition = max(0, position - 10);
+                      controller.seekTo(Duration(seconds: newPosition));
+                    },
+                  ),
+                  IconButton(
+                    icon: controller.value.isPlaying
+                        ? const Icon(Icons.pause)
+                        : const Icon(Icons.play_arrow),
+                    onPressed: () {
+                      if (controller.value.isPlaying) {
+                        controller.pause();
+                      } else {
+                        controller.play();
+                      }
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.fast_forward),
+                    onPressed: () {
+                      final position = controller.value.position.inSeconds;
+                      final duration = controller.value.duration.inSeconds;
+                      final newPosition = min(duration, position + 10);
+                      controller.seekTo(Duration(seconds: newPosition));
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.volume_up),
+                    onPressed: () {
+                      controller
+                          .setVolume(controller.value.volume == 0 ? 1.0 : 0.0);
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

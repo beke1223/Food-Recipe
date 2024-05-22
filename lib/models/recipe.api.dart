@@ -35,45 +35,43 @@ class RecipeApi {
         print("Section list +++++++++++++++++++++++++++");
 
         if (i['item']['sections'] != null) {
+          print(i['item']['sections'][0]['components']);
+          Ingredients_ind = i['item']['sections'][0]['components'];
           for (var inst in i['item']['sections']) {
-            print(inst['components'][0]);
-            print('section $inst');
-            print(inst[0]);
+            // print(inst['components'][0]);
+            // print('section $inst');
+            // print(inst[0]);
             for (var ing in inst['components']) {
-              print(ing['raw_text']);
-              Ingredients_ind.add(ing);
+              // print(ing['raw_text']);
+              // Ingredients_ind.add(ing['raw_text']);
             }
           }
+
+          print("Section list +++++++++++++++++++++++++++");
+          // print(i['item']['instructions']);
+          _temp.add(
+            {
+              "name": i['item']['name'],
+              "description": i['item']['description'],
+              "image": i['item']['thumbnail_url'],
+              "total_time": i['item']['total_time_minutes'] ?? "have no time",
+              "original_video":
+                  i['item']['original_video_url'] ?? "have not video",
+              "rating": i['item']['user_ratings'] != null
+                  ? i['item']['user_ratings']['count_positive']
+                  : "not rated",
+              "instruction": i['item']['instructions'],
+              "ingredients": Ingredients_ind
+            },
+          );
         }
-        print("Section list +++++++++++++++++++++++++++");
-        // print(i['item']['instructions']);
-        _temp.add(
-          {
-            "name": i['item']['name'],
-            "description": i['item']['description'],
-            "image": i['item']['thumbnail_url'],
-            "total_time": i['item']['total_time_minutes'] != null
-                ? i['item']['total_time_minutes']
-                : "have no time",
-            "original_video": i['item']['original_video_url'] != null
-                ? i['item']['original_video_url']
-                : "have not video",
-            "rating": i['item']['user_ratings'] != null
-                ? i['item']['user_ratings']['count_positive']
-                : "not rated",
-            "instruction": i['item']['instructions'] != null
-                ? i['item']['instructions']
-                : null,
-            "ingredients": Ingredients_ind
-          },
-        );
+        print(
+            "======================================================================");
+        print(Ingredients_ind);
+        print(
+            "======================================================================");
       }
     }
-    print(
-        "======================================================================");
-    print(Ingredients_ind);
-    print(
-        "======================================================================");
     return Recipe.recipesFromSnapshot(_temp);
   }
 }
